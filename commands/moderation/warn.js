@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } =
 const db = require('../../database/db');
 const logger = require('../../utils/logger');
 const punishment = require('../../utils/punishment');
+const { isTargetAtOrAboveModerator } = require('../../utils/roles');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -20,6 +21,12 @@ module.exports = {
                 .setDescription('부여할 경고 갯수 (기본값: 1)')
                 .setMinValue(1)
                 .setRequired(false))
+        .addIntegerOption(option =>
+            option.setName('시간')
+                .setDescription('자동 처벌 대신 적용할 타임아웃 기간 (분 단위)')
+                .setMinValue(1)
+                .setMaxValue(40320)
+                .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     async execute(interaction) {
         const target = interaction.options.getUser('대상');
@@ -30,14 +37,14 @@ module.exports = {
         const moderatorId = interaction.user.id;
 
         // 1. 본인 경고 방지
-        if (target.id === interaction.user.id) {
+        if (target.id === moderatorId) {
             const errorEmbed = new EmbedBuilder()
                 .setTitle(':x: 실행 실패')
                 .setColor(0xFF0000)
                 .setDescription('> 자기 자신에게 경고를 줄 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '자기 자신 경고 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         // 2. 봇 경고 방지
@@ -48,7 +55,7 @@ module.exports = {
                 .setDescription('> 봇에게는 경고를 줄 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '봇 경고 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         // 3. 서버 소유자 경고 방지
@@ -59,33 +66,35 @@ module.exports = {
                 .setDescription('> 서버 소유자에게는 경고를 줄 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '서버 소유자 경고 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
-        let member = null;
-        try {
-            member = await interaction.guild.members.fetch(target.id);
-        } catch (error) {
-            const errorEmbed = new EmbedBuilder()
-                .setTitle(':x: 실행 실패')
-                .setColor(0xFF0000)
-                .setDescription('> 대상 유저가 이 서버에 존재하지 않습니다.')
-                .setTimestamp();
-            logger.logFailure(interaction, '존재하지 않는 유저 경고 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+        let member = interaction.options.getMember('대상');
+        if (!member) {
+            try {
+                member = await interaction.guild.members.fetch(target.id);
+            } catch (error) {
+                const errorEmbed = new EmbedBuilder()
+                    .setTitle(':x: 실행 실패')
+                    .setColor(0xFF0000)
+                    .setDescription('> 대상 유저가 이 서버에 존재하지 않습니다.')
+                    .setTimestamp();
+                logger.logFailure(interaction, '존재하지 않는 유저 경고 시도');
+                return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
+            }
         }
 
-        const moderator = await interaction.guild.members.fetch(moderatorId);
+        const moderator = interaction.member;
 
         // 3. 권한 계층 확인 (본인보다 높거나 같은 역할의 유저는 경고 불가)
-        if (member.roles.highest.position >= moderator.roles.highest.position && interaction.guild.ownerId !== moderatorId) {
+        if (isTargetAtOrAboveModerator(member, moderator) && interaction.guild.ownerId !== moderatorId) {
             const errorEmbed = new EmbedBuilder()
                 .setTitle(':x: 실행 실패')
                 .setColor(0xFF0000)
                 .setDescription('> 본인보다 높거나 같은 역할을 가진 멤버에게는 경고를 줄 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '역할 계층 위반 경고 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
@@ -119,6 +128,13 @@ module.exports = {
                     `### 사유:        \n` +
                     `> ${punishmentReason}`
                 );
+            } else {
+                punishmentEmbed = new EmbedBuilder()
+                    .setTitle(':warning: 자동 처벌 실패')
+                    .setColor(0xF1C40F)
+                    .setDescription('> 경고는 기록됐지만 봇 권한 또는 역할 순서 문제로 자동 차단을 적용하지 못했습니다.')
+                    .setTimestamp();
+                logger.logFailure(interaction, '자동 차단 적용 실패');
             }
         } else {
             let durationMs = 0;
@@ -152,7 +168,6 @@ module.exports = {
                 if (punishmentEmbed) {
                     // timeout.js와 동일한 스타일로 커스텀
                     punishmentEmbed.setTitle(':rotating_light: 유저 타임아웃 안내');
-                    punishmentEmbed.setColor(0x8B0000)
                     punishmentEmbed.setThumbnail(target.displayAvatarURL({ dynamic: true }))
                     punishmentEmbed.setDescription(
                         `### 처리자:        \n` +
@@ -164,6 +179,13 @@ module.exports = {
                         `### 사유:        \n` +
                         `> ${pReason}`
                     );
+                } else {
+                    punishmentEmbed = new EmbedBuilder()
+                        .setTitle(':warning: 자동 처벌 실패')
+                        .setColor(0xF1C40F)
+                        .setDescription('> 경고는 기록됐지만 봇 권한 또는 역할 순서 문제로 자동 처벌을 적용하지 못했습니다.')
+                        .setTimestamp();
+                    logger.logFailure(interaction, '자동 타임아웃 적용 실패');
                 }
             }
         }

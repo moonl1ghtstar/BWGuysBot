@@ -22,7 +22,7 @@ module.exports = {
         return stmt.run(userId, guildId, reason, moderatorId);
     },
     getWarnings: (userId, guildId) => {
-        const stmt = db.prepare('SELECT * FROM warnings WHERE user_id = ? AND guild_id = ?');
+        const stmt = db.prepare('SELECT * FROM warnings WHERE user_id = ? AND guild_id = ? ORDER BY id ASC');
         return stmt.all(userId, guildId);
     },
     clearWarnings: (userId, guildId) => {

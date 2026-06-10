@@ -23,7 +23,7 @@ module.exports = {
                 .setDescription('> 봇의 경고 기록은 조회할 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '봇 경고조회 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         // --- [1단계] 데이터 처리 및 내역 구성 ---
@@ -36,7 +36,7 @@ module.exports = {
                 .setDescription(`> **${target.tag}** 유저는 경고 기록이 없습니다.`)
                 .setTimestamp();
             logger.logFailure(interaction, '경고 기록이 없는 유저의 경고조회 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         let description = `### ${target} 님의 경고 기록        \n\n`;

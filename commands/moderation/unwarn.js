@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const db = require('../../database/db');
 const logger = require('../../utils/logger');
+const { isTargetAtOrAboveModerator } = require('../../utils/roles');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -30,7 +31,7 @@ module.exports = {
                 .setDescription('> 자기 자신의 경고를 취소할 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '자기 자신 경고취소 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         // 2. 봇 경고취소 방지
@@ -41,28 +42,30 @@ module.exports = {
                 .setDescription('> 봇에게는 경고 취소를 할 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '봇 경고취소 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
-        let member = null;
-        try {
-            member = await interaction.guild.members.fetch(target.id);
-        } catch (error) {
-            // 유저가 서버에 없는 경우 member는 null
+        let member = interaction.options.getMember('대상');
+        if (!member) {
+            try {
+                member = await interaction.guild.members.fetch(target.id);
+            } catch (error) {
+                // 유저가 서버에 없는 경우 member는 null
+            }
         }
 
-        const moderator = await interaction.guild.members.fetch(moderatorId);
+        const moderator = interaction.member;
 
         // 2. 권한 계층 확인 (서버에 존재하는 경우에만)
         if (member) {
-            if (member.roles.highest.position >= moderator.roles.highest.position && interaction.guild.ownerId !== moderatorId) {
+            if (isTargetAtOrAboveModerator(member, moderator) && interaction.guild.ownerId !== moderatorId) {
                 const errorEmbed = new EmbedBuilder()
                     .setTitle(':x: 실행 실패')
                     .setColor(0xFF0000)
                     .setDescription('> 본인보다 높거나 같은 역할을 가진 멤버의 경고는 취소할 수 없습니다.')
                     .setTimestamp();
                 logger.logFailure(interaction, '역할 계층 위반 경고취소 시도');
-                return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+                return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
             }
         }
 
@@ -76,7 +79,7 @@ module.exports = {
                 .setDescription(`> **${target.tag}** 유저는 취소할 경고 기록이 없습니다.`)
                 .setTimestamp();
             logger.logFailure(interaction, '경고 기록이 없는 유저의 경고취소 시도');
-            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ embeds: [errorEmbed], flags: [MessageFlags.Ephemeral] });
         }
 
         // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
