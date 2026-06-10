@@ -5,11 +5,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('차단')
         .setDescription('유저를 서버에서 차단합니다.')
-        .addUserOption(option => 
+        .addUserOption(option =>
             option.setName('대상')
                 .setDescription('차단할 유저')
                 .setRequired(true))
-        .addStringOption(option => 
+        .addStringOption(option =>
             option.setName('사유')
                 .setDescription('차단 사유')
                 .setRequired(false))
@@ -100,7 +100,7 @@ module.exports = {
                 `### 처리자:        \n` +
                 `> ${interaction.user}\n\n` +
                 `### 대상자:        \n` +
-                `> ${target} (${target.id})\n\n` +
+                `> ${target}        \n\n` +
                 `### 사유:        \n` +
                 `> ${reason}`
             )

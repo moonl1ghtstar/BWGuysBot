@@ -5,15 +5,15 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('타임아웃')
         .setDescription('유저를 타임아웃 시킵니다.')
-        .addUserOption(option => 
+        .addUserOption(option =>
             option.setName('대상')
                 .setDescription('타임아웃 할 유저')
                 .setRequired(true))
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option.setName('시간')
                 .setDescription('타임아웃 기간 (분 단위)')
                 .setRequired(true))
-        .addStringOption(option => 
+        .addStringOption(option =>
             option.setName('사유')
                 .setDescription('타임아웃 사유')
                 .setRequired(false))
@@ -105,7 +105,7 @@ module.exports = {
                 `### 처리자:        \n` +
                 `> ${interaction.user}\n\n` +
                 `### 대상자:        \n` +
-                `> ${target} (${target.id})\n\n` +
+                `> ${target}        \n\n` +
                 `### 기간:        \n` +
                 `> ${duration}분\n\n` +
                 `### 사유:        \n` +
