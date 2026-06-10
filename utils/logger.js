@@ -50,5 +50,3 @@ module.exports = {
         console.log(`[${time}] [FAILURE] ${user.tag} (${user.id}) failed /${commandName}${details} | Reason: ${reason}`);
     }
 };
-
-'Made By Astral Interactive'

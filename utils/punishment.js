@@ -62,5 +62,3 @@ module.exports = {
     applyTimeout,
     applyBan
 };
-
-'Made By Astral Interactive'

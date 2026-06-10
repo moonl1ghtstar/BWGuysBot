@@ -38,5 +38,3 @@ module.exports = {
         return stmt.run(guildId);
     }
 };
-
-'Made By Astral Interactive'
