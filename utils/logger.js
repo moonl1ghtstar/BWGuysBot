@@ -10,8 +10,6 @@ function getFormattedTime() {
 }
 
 function getInteractionDetails(interaction) {
-    const guildInfo = interaction.guild ? ` [Guild: ${interaction.guild.name} (${interaction.guild.id})]` : ' [DM]';
-    
     // 입력된 모든 옵션(인자)들을 동적으로 포맷팅
     const options = interaction.options.data;
     let optionsStr = '';
@@ -25,10 +23,11 @@ function getInteractionDetails(interaction) {
         optionsStr = ` | Options: [${formatted}]`;
     }
     
-    return `${guildInfo}${optionsStr}`;
+    return optionsStr;
 }
 
 module.exports = {
+    getFormattedTime,
     logCommand: (interaction) => {
         const time = getFormattedTime();
         const user = interaction.user;

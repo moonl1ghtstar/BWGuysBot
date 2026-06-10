@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const logger = require('../../utils/logger');
+const punishment = require('../../utils/punishment');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -86,34 +87,34 @@ module.exports = {
         // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
         await interaction.deferReply();
 
-        // --- [1단계] 데이터 처리 및 DM 발송 ---
-        await member.timeout(duration * 60 * 1000, reason);
+        // --- [1단계] 유틸리티를 통한 처벌 실행 ---
+        const embed = await punishment.applyTimeout(member, duration * 60 * 1000, reason);
 
-        // DM the user
-        try {
-            await target.send(`[${interaction.guild.name}] 서버에서 ${duration}분 동안 타임아웃 되었습니다.\n사유: ${reason}`);
-        } catch (error) {
-            console.log(`Could not DM user ${target.tag}`);
+        if (!embed) {
+            const errorEmbed = new EmbedBuilder()
+                .setTitle(':x: 실행 실패')
+                .setColor(0xFF0000)
+                .setDescription('> 타임아웃 처리 중 알 수 없는 오류가 발생했습니다.')
+                .setTimestamp();
+            return await interaction.editReply({ embeds: [errorEmbed] });
         }
 
-        // --- [2단계] 임베드 메세지 구성 ---
-        const embed = new EmbedBuilder()
-            .setTitle(':rotating_light: 유저 타임아웃(Timeout) 안내')
-            .setColor(0xF1C40F)
-            .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-            .setDescription(
-                `### 처리자:        \n` +
-                `> ${interaction.user}\n\n` +
-                `### 대상자:        \n` +
-                `> ${target}        \n\n` +
-                `### 기간:        \n` +
-                `> ${duration}분\n\n` +
-                `### 사유:        \n` +
-                `> ${reason}`
-            )
-            .setTimestamp();
+        // 제목 및 설명 커스텀
+        embed.setTitle(':rotating_light: 유저 타임아웃 안내');
+        embed.setColor(0x8B0000)
+        embed.setThumbnail(target.displayAvatarURL({ dynamic: true }))
+        embed.setDescription(
+            `### 처리자:        \n` +
+            `> ${interaction.user}\n\n` +
+            `### 대상자:        \n` +
+            `> ${target}        \n\n` +
+            `### 기간:        \n` +
+            `> ${duration}분\n\n` +
+            `### 사유:        \n` +
+            `> ${reason}`
+        );
 
-        // --- [3단계] 최종 메세지 발송 ---
+        // --- [2단계] 최종 메세지 발송 ---
         await interaction.editReply({
             content: `${target}`,
             embeds: [embed]
@@ -123,4 +124,3 @@ module.exports = {
         logger.logSuccess(interaction);
     },
 };
-

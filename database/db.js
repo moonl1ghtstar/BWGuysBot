@@ -1,6 +1,8 @@
 const Database = require('better-sqlite3');
+const logger = require('../utils/logger');
 const db = new Database('database.sqlite');
-console.log('[SYSTEM] SQLite database initialized successfully.');
+const time = logger.getFormattedTime();
+console.log(`[${time}] [SYSTEM] SQLite database initialized successfully.`);
 
 // Create warnings table
 db.prepare(`

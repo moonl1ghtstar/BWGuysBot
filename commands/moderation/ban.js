@@ -93,7 +93,7 @@ module.exports = {
 
         // --- [2단계] 임베드 메세지 구성 ---
         const embed = new EmbedBuilder()
-            .setTitle(':rotating_light: 유저 차단(Ban) 안내')
+            .setTitle(':rotating_light: 유저 차단 안내')
             .setColor(0x8B0000)
             .setThumbnail(target.displayAvatarURL({ dynamic: true }))
             .setDescription(

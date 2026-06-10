@@ -5,14 +5,20 @@ const logger = require('../../utils/logger');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('경고취소')
-        .setDescription('유저의 가장 최근 경고 1개를 취소합니다.')
+        .setDescription('유저의 경고를 취소(차감)합니다.')
         .addUserOption(option =>
             option.setName('대상')
                 .setDescription('경고를 취소할 유저')
                 .setRequired(true))
+        .addIntegerOption(option =>
+            option.setName('갯수')
+                .setDescription('취소할 경고 갯수 (기본값: 1)')
+                .setMinValue(1)
+                .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     async execute(interaction) {
         const target = interaction.options.getUser('대상');
+        const amount = interaction.options.getInteger('갯수') || 1;
         const guildId = interaction.guild.id;
         const moderatorId = interaction.user.id;
 
@@ -76,10 +82,16 @@ module.exports = {
         // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
         await interaction.deferReply();
 
-        // 가장 마지막에 추가된 경고(가장 최근 경고) 삭제
-        const lastWarn = warnings[warnings.length - 1];
-        db.removeWarning(lastWarn.id);
-        const remainingWarns = warnings.length - 1;
+        // 취소할 갯수 결정 (보유 경고보다 많이 요청하면 전부 삭제)
+        const actualAmount = Math.min(amount, warnings.length);
+
+        // 가장 마지막에 추가된 경고부터 순차적으로 삭제
+        for (let i = 0; i < actualAmount; i++) {
+            const warnToRemove = warnings[warnings.length - 1 - i];
+            db.removeWarning(warnToRemove.id);
+        }
+
+        const remainingWarns = warnings.length - actualAmount;
 
         // --- [2단계] 임베드 메세지 구성 ---
         const embed = new EmbedBuilder()
@@ -91,8 +103,8 @@ module.exports = {
                 `> ${interaction.user}\n\n` +
                 `### 대상자:        \n` +
                 `> ${target}        \n\n` +
-                `### 남은 경고 누적:        \n` +
-                `> ${remainingWarns}회 / 5회       \n\n `
+                `### 경고 누적:        \n` +
+                `> ${remainingWarns}회 / 5회 (-${actualAmount})       \n\n `
             )
             .setTimestamp();
 

@@ -93,7 +93,7 @@ module.exports = {
 
         // --- [2단계] 임베드 메세지 구성 ---
         const embed = new EmbedBuilder()
-            .setTitle(':rotating_light: 유저 추방(Kick) 안내')
+            .setTitle(':rotating_light: 유저 추방 안내')
             .setColor(0xE74C3C)
             .setThumbnail(target.displayAvatarURL({ dynamic: true }))
             .setDescription(

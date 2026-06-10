@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
+const logger = require('./utils/logger');
 
 const client = new Client({
     intents: [
@@ -33,7 +34,8 @@ if (fs.existsSync(foldersPath)) {
             }
         }
     }
-    console.log(`[SYSTEM] Loaded ${client.commands.size} commands successfully.`);
+    const time = logger.getFormattedTime();
+    console.log(`[${time}] [SYSTEM] Loaded ${client.commands.size} commands successfully.`);
 }
 
 // Load events
