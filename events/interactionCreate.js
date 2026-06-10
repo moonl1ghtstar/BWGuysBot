@@ -36,3 +36,5 @@ module.exports = {
         }
     },
 };
+
+'Made By Astral Interactive'

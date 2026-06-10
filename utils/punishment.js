@@ -12,10 +12,10 @@ async function applyTimeout(member, durationMs, reason) {
 
     try {
         await member.timeout(durationMs, reason);
-        
+
         const durationMinutes = Math.floor(durationMs / 60000);
-        const durationText = durationMinutes >= 1440 ? `${Math.floor(durationMinutes / 1440)}일` : 
-                             durationMinutes >= 60 ? `${Math.floor(durationMinutes / 60)}시간` : `${durationMinutes}분`;
+        const durationText = durationMinutes >= 1440 ? `${Math.floor(durationMinutes / 1440)}일` :
+            durationMinutes >= 60 ? `${Math.floor(durationMinutes / 60)}시간` : `${durationMinutes}분`;
 
         // DM 발송 시도
         try {
@@ -62,3 +62,5 @@ module.exports = {
     applyTimeout,
     applyBan
 };
+
+'Made By Astral Interactive'

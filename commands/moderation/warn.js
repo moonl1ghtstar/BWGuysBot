@@ -20,11 +20,6 @@ module.exports = {
                 .setDescription('부여할 경고 갯수 (기본값: 1)')
                 .setMinValue(1)
                 .setRequired(false))
-        .addIntegerOption(option =>
-            option.setName('시간')
-                .setDescription('함께 부여할 타임아웃 기간 (분 단위)')
-                .setMinValue(1)
-                .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     async execute(interaction) {
         const target = interaction.options.getUser('대상');
@@ -67,12 +62,6 @@ module.exports = {
             return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
 
-        const moderator = await interaction.guild.members.fetch(moderatorId);
-
-        // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
-        // 3초 제한을 피하기 위해 비동기 작업 전 미리 응답 지연을 선언합니다.
-        await interaction.deferReply();
-
         let member = null;
         try {
             member = await interaction.guild.members.fetch(target.id);
@@ -83,8 +72,10 @@ module.exports = {
                 .setDescription('> 대상 유저가 이 서버에 존재하지 않습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '존재하지 않는 유저 경고 시도');
-            return await interaction.editReply({ embeds: [errorEmbed] });
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
+
+        const moderator = await interaction.guild.members.fetch(moderatorId);
 
         // 3. 권한 계층 확인 (본인보다 높거나 같은 역할의 유저는 경고 불가)
         if (member.roles.highest.position >= moderator.roles.highest.position && interaction.guild.ownerId !== moderatorId) {
@@ -94,8 +85,11 @@ module.exports = {
                 .setDescription('> 본인보다 높거나 같은 역할을 가진 멤버에게는 경고를 줄 수 없습니다.')
                 .setTimestamp();
             logger.logFailure(interaction, '역할 계층 위반 경고 시도');
-            return await interaction.editReply({ embeds: [errorEmbed] });
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
+
+        // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
+        await interaction.deferReply();
 
         // --- [1단계] 데이터 기록 및 누적 횟수 계산 ---
         for (let i = 0; i < amount; i++) {
@@ -158,6 +152,7 @@ module.exports = {
                 if (punishmentEmbed) {
                     // timeout.js와 동일한 스타일로 커스텀
                     punishmentEmbed.setTitle(':rotating_light: 유저 타임아웃 안내');
+                    punishmentEmbed.setColor(0x8B0000)
                     punishmentEmbed.setThumbnail(target.displayAvatarURL({ dynamic: true }))
                     punishmentEmbed.setDescription(
                         `### 처리자:        \n` +
@@ -203,3 +198,5 @@ module.exports = {
         logger.logSuccess(interaction);
     },
 };
+
+'Made By Astral Interactive'

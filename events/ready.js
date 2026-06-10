@@ -9,3 +9,5 @@ module.exports = {
         console.log(`[${time}] [INFO] Ready! Logged in as ${client.user.tag}`);
     },
 };
+
+'Made By Astral Interactive'

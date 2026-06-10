@@ -44,3 +44,5 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 		console.error(error);
 	}
 })();
+
+'Made By Astral Interactive'
