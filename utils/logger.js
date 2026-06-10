@@ -9,16 +9,45 @@ function getFormattedTime() {
     return `${year}:${month}:${day}:${hours}:${minutes}:${seconds}`;
 }
 
+function getInteractionDetails(interaction) {
+    const guildInfo = interaction.guild ? ` [Guild: ${interaction.guild.name} (${interaction.guild.id})]` : ' [DM]';
+    
+    // 입력된 모든 옵션(인자)들을 동적으로 포맷팅
+    const options = interaction.options.data;
+    let optionsStr = '';
+    if (options.length > 0) {
+        const formatted = options.map(opt => {
+            if (opt.user) {
+                return `${opt.name}: ${opt.user.tag} (${opt.user.id})`;
+            }
+            return `${opt.name}: ${opt.value}`;
+        }).join(', ');
+        optionsStr = ` | Options: [${formatted}]`;
+    }
+    
+    return `${guildInfo}${optionsStr}`;
+}
+
 module.exports = {
     logCommand: (interaction) => {
         const time = getFormattedTime();
         const user = interaction.user;
         const commandName = interaction.commandName;
-        
-        // 대상(target) 옵션이 있는 경우 가져오기
-        const target = interaction.options.getUser('대상') || interaction.options.getUser('target');
-        const targetInfo = target ? ` target ${target.tag} (${target.id})` : '';
-        
-        console.log(`[${time}] ${user.tag} (${user.id}) used ${commandName}${targetInfo}`);
+        const details = getInteractionDetails(interaction);
+        console.log(`[${time}] [COMMAND] ${user.tag} (${user.id}) used /${commandName}${details}`);
+    },
+    logSuccess: (interaction) => {
+        const time = getFormattedTime();
+        const user = interaction.user;
+        const commandName = interaction.commandName;
+        const details = getInteractionDetails(interaction);
+        console.log(`[${time}] [SUCCESS] ${user.tag} (${user.id}) completed /${commandName}${details}`);
+    },
+    logFailure: (interaction, reason) => {
+        const time = getFormattedTime();
+        const user = interaction.user;
+        const commandName = interaction.commandName;
+        const details = getInteractionDetails(interaction);
+        console.log(`[${time}] [FAILURE] ${user.tag} (${user.id}) failed /${commandName}${details} | Reason: ${reason}`);
     }
 };

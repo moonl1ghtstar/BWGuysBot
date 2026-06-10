@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const logger = require('../../utils/logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,25 +17,71 @@ module.exports = {
     async execute(interaction) {
         const target = interaction.options.getUser('대상');
         const reason = interaction.options.getString('사유') || '사유 없음';
-        const member = await interaction.guild.members.fetch(target.id);
-        const moderator = await interaction.guild.members.fetch(interaction.user.id);
+        const guildId = interaction.guild.id;
+        const moderatorId = interaction.user.id;
 
         // 1. 본인 추방 방지
-        if (target.id === interaction.user.id) {
-            return await interaction.reply({ content: '자기 자신을 추방할 수 없습니다.', ephemeral: true });
+        if (target.id === moderatorId) {
+            const errorEmbed = new EmbedBuilder()
+                .setTitle(':x: 실행 실패')
+                .setColor(0xFF0000)
+                .setDescription('> 자기 자신을 추방할 수 없습니다.')
+                .setTimestamp();
+            logger.logFailure(interaction, '자기 자신 추방 시도');
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
 
-        // 2. 권한 계층 확인
-        if (member.roles.highest.position >= moderator.roles.highest.position && interaction.guild.ownerId !== interaction.user.id) {
-            return await interaction.reply({ content: '본인보다 높거나 같은 역할을 가진 멤버는 추방할 수 없습니다.', ephemeral: true });
+        // 2. 서버 소유자 추방 방지
+        if (target.id === interaction.guild.ownerId) {
+            const errorEmbed = new EmbedBuilder()
+                .setTitle(':x: 실행 실패')
+                .setColor(0xFF0000)
+                .setDescription('> 서버 소유자는 추방할 수 없습니다.')
+                .setTimestamp();
+            logger.logFailure(interaction, '서버 소유자 추방 시도');
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+        }
+
+        let member = null;
+        try {
+            member = await interaction.guild.members.fetch(target.id);
+        } catch (error) {
+            const errorEmbed = new EmbedBuilder()
+                .setTitle(':x: 실행 실패')
+                .setColor(0xFF0000)
+                .setDescription('> 대상 유저가 이 서버에 존재하지 않습니다.')
+                .setTimestamp();
+            logger.logFailure(interaction, '존재하지 않는 유저 추방 시도');
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+        }
+
+        const moderator = await interaction.guild.members.fetch(moderatorId);
+
+        // 3. 권한 계층 확인
+        if (member.roles.highest.position >= moderator.roles.highest.position && interaction.guild.ownerId !== moderatorId) {
+            const errorEmbed = new EmbedBuilder()
+                .setTitle(':x: 실행 실패')
+                .setColor(0xFF0000)
+                .setDescription('> 본인보다 높거나 같은 역할을 가진 멤버는 추방할 수 없습니다.')
+                .setTimestamp();
+            logger.logFailure(interaction, '역할 계층 위반 추방 시도');
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
 
         if (!member.kickable) {
-            return await interaction.reply({ content: '봇의 권한이 부족하여 이 유저를 추방할 수 없습니다.', ephemeral: true });
+            const errorEmbed = new EmbedBuilder()
+                .setTitle(':x: 실행 실패')
+                .setColor(0xFF0000)
+                .setDescription('> 봇의 권한이 부족하여 이 유저를 추방할 수 없습니다.')
+                .setTimestamp();
+            logger.logFailure(interaction, '봇의 권한 부족으로 추방 불가');
+            return await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
 
+        // 응답 지연 (데이터 처리 및 메시지 발송 시간 확보)
         await interaction.deferReply();
 
+        // --- [1단계] 데이터 처리 및 DM 발송 ---
         // DM the user before kicking
         try {
             await target.send(`[${interaction.guild.name}] 서버에서 추방되었습니다.\n사유: ${reason}`);
@@ -44,16 +91,29 @@ module.exports = {
 
         await member.kick(reason);
 
+        // --- [2단계] 임베드 메세지 구성 ---
         const embed = new EmbedBuilder()
-            .setTitle('유저 추방')
-            .setColor(0xFF0000)
-            .addFields(
-                { name: '대상', value: `${target.tag} (${target.id})`, inline: true },
-                { name: '사유', value: reason, inline: true },
-                { name: '관리자', value: interaction.user.tag, inline: true }
+            .setTitle(':rotating_light: 유저 추방(Kick) 안내')
+            .setColor(0xE74C3C)
+            .setThumbnail(target.displayAvatarURL({ dynamic: true }))
+            .setDescription(
+                `### 처리자:        \n` +
+                `> ${interaction.user}\n\n` +
+                `### 대상자:        \n` +
+                `> ${target} (${target.id})\n\n` +
+                `### 사유:        \n` +
+                `> ${reason}`
             )
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        // --- [3단계] 최종 메세지 발송 ---
+        await interaction.editReply({
+            content: `${target}`,
+            embeds: [embed]
+        });
+
+        // 성공 로그 기록
+        logger.logSuccess(interaction);
     },
 };
+

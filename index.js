@@ -33,6 +33,7 @@ if (fs.existsSync(foldersPath)) {
             }
         }
     }
+    console.log(`[SYSTEM] Loaded ${client.commands.size} commands successfully.`);
 }
 
 // Load events
