@@ -55,5 +55,3 @@ if (fs.existsSync(eventsPath)) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
-
-'Made By Astral Interactive'
