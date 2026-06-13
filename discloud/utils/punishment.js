@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const db = require('../database/db');
 
 /**
  * 유저를 타임아웃 시키고 결과 임베드를 반환합니다.
@@ -7,22 +8,18 @@ const { EmbedBuilder } = require('discord.js');
  * @param {string} reason 사유
  * @returns {EmbedBuilder|null} 성공 시 결과 임베드, 실패 시 null
  */
-async function applyTimeout(member, durationMs, reason) {
+async function applyTimeout(member, durationMs, reason, channelId = null) {
     if (!member || !member.moderatable) return null;
 
     try {
         await member.timeout(durationMs, reason);
+        if (channelId) {
+            db.setTimeoutNotificationChannel(member.id, member.guild.id, channelId);
+        }
 
         const durationMinutes = Math.floor(durationMs / 60000);
         const durationText = durationMinutes >= 1440 ? `${Math.floor(durationMinutes / 1440)}일` :
             durationMinutes >= 60 ? `${Math.floor(durationMinutes / 60)}시간` : `${durationMinutes}분`;
-
-        // DM 발송 시도
-        try {
-            await member.send(`[${member.guild.name}] 서버에서 ${durationText} 동안 타임아웃 되었습니다.\n사유: ${reason}`);
-        } catch (err) {
-            // DM 차단 등의 이유로 실패할 수 있음
-        }
 
         return new EmbedBuilder()
             .setTitle(':timeout: 자동 처벌: 타임아웃')

@@ -109,6 +109,12 @@ module.exports = {
             )
             .setTimestamp();
 
+        try {
+            await target.send({ embeds: [embed] });
+        } catch (error) {
+            console.log(`Could not DM user ${target.tag}`);
+        }
+
         // --- [3단계] 최종 메세지 발송 ---
         await interaction.editReply({
             content: `${target}`,

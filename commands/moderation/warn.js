@@ -163,7 +163,7 @@ module.exports = {
             }
 
             if (durationMs > 0) {
-                punishmentEmbed = await punishment.applyTimeout(member, durationMs, pReason);
+                punishmentEmbed = await punishment.applyTimeout(member, durationMs, pReason, interaction.channelId);
 
                 if (punishmentEmbed) {
                     // timeout.js와 동일한 스타일로 커스텀
@@ -209,6 +209,12 @@ module.exports = {
 
         const embeds = [warnEmbed];
         if (punishmentEmbed) embeds.push(punishmentEmbed);
+
+        try {
+            await target.send({ embeds });
+        } catch (error) {
+            console.log(`Could not DM user ${target.tag}`);
+        }
 
         // --- [4단계] 최종 메세지 발송 ---
         await interaction.editReply({

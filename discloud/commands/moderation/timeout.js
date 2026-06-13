@@ -92,7 +92,7 @@ module.exports = {
         await interaction.deferReply();
 
         // --- [1단계] 유틸리티를 통한 처벌 실행 ---
-        const embed = await punishment.applyTimeout(member, duration * 60 * 1000, reason);
+        const embed = await punishment.applyTimeout(member, duration * 60 * 1000, reason, interaction.channelId);
 
         if (!embed) {
             const errorEmbed = new EmbedBuilder()
@@ -116,6 +116,12 @@ module.exports = {
             `### 사유:        \n` +
             `> ${reason}`
         );
+
+        try {
+            await target.send({ embeds: [embed] });
+        } catch (error) {
+            console.log(`Could not DM user ${target.tag}`);
+        }
 
         // --- [2단계] 최종 메세지 발송 ---
         await interaction.editReply({
