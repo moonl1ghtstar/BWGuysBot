@@ -21,6 +21,7 @@ db.prepare(`
         user_id TEXT NOT NULL,
         guild_id TEXT NOT NULL,
         channel_id TEXT NOT NULL,
+        message_id TEXT,
         expires_at DATETIME NOT NULL,
         notified_at DATETIME,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -35,6 +36,9 @@ if (!timeoutNotificationColumnNames.has('expires_at')) {
 }
 if (!timeoutNotificationColumnNames.has('notified_at')) {
     db.prepare('ALTER TABLE timeout_notifications ADD COLUMN notified_at DATETIME').run();
+}
+if (!timeoutNotificationColumnNames.has('message_id')) {
+    db.prepare('ALTER TABLE timeout_notifications ADD COLUMN message_id TEXT').run();
 }
 
 module.exports = {
@@ -58,17 +62,33 @@ module.exports = {
         const stmt = db.prepare('DELETE FROM warnings WHERE guild_id = ?');
         return stmt.run(guildId);
     },
-    setTimeoutNotificationChannel: (userId, guildId, channelId, expiresAt) => {
+    setTimeoutNotificationChannel: (
+        userId,
+        guildId,
+        channelId,
+        expiresAt,
+        messageId = null
+    ) => {
         const stmt = db.prepare(`
-            INSERT INTO timeout_notifications (user_id, guild_id, channel_id, expires_at, notified_at)
-            VALUES (?, ?, ?, ?, NULL)
+            INSERT INTO timeout_notifications
+            (user_id, guild_id, channel_id, expires_at, message_id, notified_at)
+            VALUES (?, ?, ?, ?, ?, NULL)
+    
             ON CONFLICT(user_id, guild_id) DO UPDATE SET
                 channel_id = excluded.channel_id,
                 expires_at = excluded.expires_at,
+                message_id = excluded.message_id,
                 notified_at = NULL,
                 updated_at = CURRENT_TIMESTAMP
         `);
-        return stmt.run(userId, guildId, channelId, expiresAt);
+
+        return stmt.run(
+            userId,
+            guildId,
+            channelId,
+            expiresAt,
+            messageId
+        );
     },
     getTimeoutNotificationChannel: (userId, guildId) => {
         const stmt = db.prepare('SELECT * FROM timeout_notifications WHERE user_id = ? AND guild_id = ?');

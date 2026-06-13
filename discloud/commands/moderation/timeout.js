@@ -124,10 +124,25 @@ module.exports = {
         }
 
         // --- [2단계] 최종 메세지 발송 ---
-        await interaction.editReply({
+        const sentMessage = await interaction.editReply({
             content: `${target}`,
             embeds: [embed]
         });
+
+        const notification = db.getTimeoutNotificationChannel(
+            target.id,
+            interaction.guild.id
+        );
+
+        if (notification) {
+            db.setTimeoutNotificationChannel(
+                target.id,
+                interaction.guild.id,
+                notification.channel_id,
+                notification.expires_at,
+                sentMessage.id
+            );
+        }
 
         // 성공 로그 기록
         logger.logSuccess(interaction);
