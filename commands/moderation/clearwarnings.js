@@ -37,5 +37,3 @@ module.exports = {
         logger.logSuccess(interaction);
     },
 };
-
-'Made By Astral Interactive'
