@@ -14,7 +14,8 @@ async function applyTimeout(member, durationMs, reason, channelId = null) {
     try {
         await member.timeout(durationMs, reason);
         if (channelId) {
-            db.setTimeoutNotificationChannel(member.id, member.guild.id, channelId);
+            const expiresAt = new Date(Date.now() + durationMs).toISOString();
+            db.setTimeoutNotificationChannel(member.id, member.guild.id, channelId, expiresAt);
         }
 
         const durationMinutes = Math.floor(durationMs / 60000);

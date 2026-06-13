@@ -1,6 +1,20 @@
 const { EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
 
+function formatDuration(durationMs) {
+    const durationMinutes = Math.floor(durationMs / 60000);
+
+    if (durationMinutes >= 1440) {
+        return `${Math.floor(durationMinutes / 1440)}일`;
+    }
+
+    if (durationMinutes >= 60) {
+        return `${Math.floor(durationMinutes / 60)}시간`;
+    }
+
+    return `${durationMinutes}분`;
+}
+
 /**
  * 유저를 타임아웃 시키고 결과 임베드를 반환합니다.
  * @param {GuildMember} member 타임아웃 대상 멤버
@@ -14,7 +28,8 @@ async function applyTimeout(member, durationMs, reason, channelId = null) {
     try {
         await member.timeout(durationMs, reason);
         if (channelId) {
-            db.setTimeoutNotificationChannel(member.id, member.guild.id, channelId);
+            const expiresAt = new Date(Date.now() + durationMs).toISOString();
+            db.setTimeoutNotificationChannel(member.id, member.guild.id, channelId, expiresAt);
         }
 
         const durationMinutes = Math.floor(durationMs / 60000);
